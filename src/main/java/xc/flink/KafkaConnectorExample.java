@@ -18,85 +18,68 @@
 
 package xc.flink;
 
-import java.util.Random;
-
+import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.common.serialization.TypeInformationSerializationSchema;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Properties;
+import java.util.Random;
 
 /**
  * An example of grouped stream windowing into sliding time windows. This
  * example uses [[RichParallelSourceFunction]] to generate a list of key-value
  * pairs.
  */
-public class GroupedProcessingTimeWindowExample {
+public class KafkaConnectorExample {
 
-    public static final Logger log = LoggerFactory.getLogger(GroupedProcessingTimeWindowExample.class);
+    public static final Logger log = LoggerFactory.getLogger(KafkaConnectorExample.class);
 
     public static void main(String[] args) throws Exception {
         //local environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         //submit to remote environment
         //final StreamExecutionEnvironment env = StreamExecutionEnvironment.createRemoteEnvironment("192.168.2.32", 8083, "D:/Repository/flink-demo/target/flink-0.0.1-SNAPSHOT.jar");
-
         env.setParallelism(4);
+        //check point
+        env.enableCheckpointing(5000);
+        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+//        env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);
+//        env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);
 
-        DataStream<Tuple3<String, String, Integer>> stream = env.addSource(new DataSource());
+        Properties properties = new Properties();
+        //ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
+        //ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG
 
-        // 按产线分组计算结果
-        stream.keyBy(1).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-            @Override
-            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-                log.info("[Line] Line :" + value.f1 + ", Count :" + value.f2);
-                //System.out.println("[Line] Line :" + value.f1 + ", Count :" + value.f2);
-            }
-        });
+        properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.2.32:9092");
+        //properties.setProperty("zookeeper.connect", "192.168.2.32:2181");
+        //properties.setProperty("group.id", "test-consumer-group");
 
-        // 按产品分组计算结果（混线）
-        stream.keyBy(0).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-            @Override
-            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-                log.info("[Product] Product : " + value.f0 + ", Count :" + value.f2);
-                //System.out.println("[Product] Product : " + value.f0 + ", Count :" + value.f2);
-            }
-        });
+        //FlinkKafkaConsumer kafkaConsumer = new FlinkKafkaConsumer("test", new SimpleStringSchema(), properties);
+//        FlinkKafkaConsumer kafkaConsumer = new FlinkKafkaConsumer("test", new TypeInformationSerializationSchema(TypeInformation.of(new TypeHint<Tuple3<String, String, Integer>>() {
+//        }), new ExecutionConfig()), properties);
 
-        // 按产线和产品分组计算结果
-        stream.keyBy(new KeySelector<Tuple3<String, String, Integer>, String>() {
+        FlinkKafkaProducer kafkaProducer = new FlinkKafkaProducer("test", new TypeInformationSerializationSchema(TypeInformation.of(new TypeHint<Tuple3<String, String, Integer>>() {
+        }), new ExecutionConfig()), properties);
 
-            @Override
-            public String getKey(Tuple3<String, String, Integer> value) throws Exception {
-                return value.f0 + value.f1;
-            }
-        }).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-            @Override
-            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-                log.info("[Line&Product] Product : " + value.f0 + ", Line :" + value.f1 + ", Count :" + value.f2);
-//                System.out.println(
-//                        "[Line&Product] Product : " + value.f0 + ", Line :" + value.f1 + ", Count :" + value.f2);
-            }
-        });
 
-        // 所有产线所有产品总和
-        stream.keyBy(new KeySelector<Tuple3<String, String, Integer>, String>() {
-
-            @Override
-            public String getKey(Tuple3<String, String, Integer> value) throws Exception {
-                return "";
-            }
-        }).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-            @Override
-            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-                log.info("[Total] Count :" + value.f2);
-//                System.out.println("[Total] Count :" + value.f2);
-            }
-        });
+        //DataStream<Tuple3<String, String, Integer>> stream = env.addSource(new DataSource());
+        DataStreamSink stream = env.addSource(new DataSource()).addSink(kafkaProducer);
 
         env.execute();
     }
