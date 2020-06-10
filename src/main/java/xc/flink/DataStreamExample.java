@@ -18,11 +18,8 @@
 
 package xc.flink;
 
-import java.util.Random;
-
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
@@ -30,14 +27,16 @@ import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
+
 /**
  * An example of grouped stream windowing into sliding time windows. This
  * example uses [[RichParallelSourceFunction]] to generate a list of key-value
  * pairs.
  */
-public class GroupedProcessingTimeWindowExample {
+public class DataStreamExample {
 
-    public static final Logger log = LoggerFactory.getLogger(GroupedProcessingTimeWindowExample.class);
+    public static final Logger log = LoggerFactory.getLogger(DataStreamExample.class);
 
     public static void main(String[] args) throws Exception {
         //local environment
@@ -59,13 +58,20 @@ public class GroupedProcessingTimeWindowExample {
         });
 
         // 按产品分组计算结果（混线）
-        stream.keyBy(0).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-            @Override
-            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-                log.info("[Product] Product : " + value.f0 + ", Count :" + value.f2);
-                //System.out.println("[Product] Product : " + value.f0 + ", Count :" + value.f2);
-            }
-        });
+//        stream.keyBy(0).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
+//            @Override
+//            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
+//                log.info("[Product] Product : " + value.f0 + ", Count :" + value.f2);
+//                //System.out.println("[Product] Product : " + value.f0 + ", Count :" + value.f2);
+//                StatisticData sd = new StatisticData();
+//                sd.setProductId(value.f0);
+//                sd.setCount(value.f2);
+//                MongoDBUtils.upsert(collection, "productId", value.f0, sd);
+//            }
+//        });
+
+
+        stream.keyBy(0).sum(2).addSink(new ProductSink());
 
         // 按产线和产品分组计算结果
         stream.keyBy(new KeySelector<Tuple3<String, String, Integer>, String>() {
@@ -123,7 +129,7 @@ public class GroupedProcessingTimeWindowExample {
         public void run(SourceContext<Tuple3<String, String, Integer>> ctx) throws Exception {
             Random random = new Random(System.currentTimeMillis());
             while (running) {
-                Thread.sleep(100);
+                Thread.sleep(1000);
                 String producId = productIds[random.nextInt(productIds.length)];
                 String lineId = lineIds[random.nextInt(lineIds.length)];
                 int productCount = random.nextInt(10) + 1;
