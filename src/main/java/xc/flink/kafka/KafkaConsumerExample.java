@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package xc.flink;
+package xc.flink.kafka;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -39,9 +39,9 @@ import java.util.Properties;
  * example uses [[RichParallelSourceFunction]] to generate a list of key-value
  * pairs.
  */
-public class KafkaConnectorExample {
+public class KafkaConsumerExample {
 
-    public static final Logger log = LoggerFactory.getLogger(KafkaConnectorExample.class);
+    public static final Logger log = LoggerFactory.getLogger(KafkaConsumerExample.class);
 
     public static void main(String[] args) throws Exception {
         //local environment
