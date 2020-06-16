@@ -26,7 +26,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +64,7 @@ public class KafkaConsumerExample {
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "test");
 
 
-        FlinkKafkaConsumer kafkaConsumer = new FlinkKafkaConsumer("test", new SimpleStringSchema(), properties);
+        FlinkKafkaConsumer011 kafkaConsumer = new FlinkKafkaConsumer011("test", new SimpleStringSchema(), properties);
         //FlinkKafkaConsumer kafkaConsumer = new FlinkKafkaConsumer("test-json", new JSONKeyValueDeserializationSchema(true), properties);
         /**适用这个类型的Deserialization必须保证数据是json类型，并使用JsonNode来接收
          * {

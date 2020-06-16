@@ -1,4 +1,4 @@
-package xc.flink.mongo.utils;
+package xc.flink.utils;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;

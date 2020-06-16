@@ -5,7 +5,7 @@ import com.mongodb.client.MongoDatabase;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
-import xc.flink.mongo.utils.MongoDBUtils;
+import xc.flink.utils.MongoDBUtils;
 
 public class ProductSink extends RichSinkFunction<Tuple3<String, String, Integer>> {
 
