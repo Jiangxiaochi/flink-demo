@@ -1,4 +1,4 @@
-package xc.flink;
+package xc.flink.datastream;
 
 public class StatisticData {
 

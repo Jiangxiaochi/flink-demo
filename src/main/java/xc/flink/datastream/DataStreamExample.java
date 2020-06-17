@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package xc.flink;
+package xc.flink.datastream;
 
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;

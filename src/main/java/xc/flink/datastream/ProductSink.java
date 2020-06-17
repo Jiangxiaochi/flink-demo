@@ -1,13 +1,13 @@
-package xc.flink;
+package xc.flink.datastream;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
-import xc.flink.mongo.utils.MongoDBUtils;
+import xc.flink.utils.MongoDBUtils;
 
-public class LineSink extends RichSinkFunction<Tuple3<String, String, Integer>> {
+public class ProductSink extends RichSinkFunction<Tuple3<String, String, Integer>> {
 
     MongoCollection collection;
 
@@ -22,9 +22,8 @@ public class LineSink extends RichSinkFunction<Tuple3<String, String, Integer>> 
     @Override
     public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
         StatisticData sd = new StatisticData();
-        sd.setLineId(value.f1);
+        sd.setProductId(value.f0);
         sd.setCount(value.f2);
-        MongoDBUtils.upsert(collection, "lineId", value.f1, sd);
+        MongoDBUtils.upsert(collection, "productId", value.f0, sd);
     }
-
 }
