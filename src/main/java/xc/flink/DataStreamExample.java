@@ -29,48 +29,25 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
-/**
- * An example of grouped stream windowing into sliding time windows. This
- * example uses [[RichParallelSourceFunction]] to generate a list of key-value
- * pairs.
- */
 public class DataStreamExample {
 
     public static final Logger log = LoggerFactory.getLogger(DataStreamExample.class);
 
     public static void main(String[] args) throws Exception {
         //local environment
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        //submit to remote environment
-        //final StreamExecutionEnvironment env = StreamExecutionEnvironment.createRemoteEnvironment("192.168.2.32", 8083, "D:/Repository/flink-demo/target/flink-0.0.1-SNAPSHOT.jar");
+        //final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        env.setParallelism(4);
+        //submit to remote environment
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.createRemoteEnvironment("192.168.2.32", 8083, "D:/Repository/flink-demo/target/flink-0.0.1-SNAPSHOT.jar");
+
+        env.setParallelism(1);
 
         DataStream<Tuple3<String, String, Integer>> stream = env.addSource(new DataSource());
 
         // 按产线分组计算结果
-        stream.keyBy(1).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-            @Override
-            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-                log.info("[Line] Line :" + value.f1 + ", Count :" + value.f2);
-                //System.out.println("[Line] Line :" + value.f1 + ", Count :" + value.f2);
-            }
-        });
+        stream.keyBy(1).sum(2).addSink(new LineSink());
 
         // 按产品分组计算结果（混线）
-//        stream.keyBy(0).sum(2).addSink(new SinkFunction<Tuple3<String, String, Integer>>() {
-//            @Override
-//            public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
-//                log.info("[Product] Product : " + value.f0 + ", Count :" + value.f2);
-//                //System.out.println("[Product] Product : " + value.f0 + ", Count :" + value.f2);
-//                StatisticData sd = new StatisticData();
-//                sd.setProductId(value.f0);
-//                sd.setCount(value.f2);
-//                MongoDBUtils.upsert(collection, "productId", value.f0, sd);
-//            }
-//        });
-
-
         stream.keyBy(0).sum(2).addSink(new ProductSink());
 
         // 按产线和产品分组计算结果
@@ -84,8 +61,6 @@ public class DataStreamExample {
             @Override
             public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
                 log.info("[Line&Product] Product : " + value.f0 + ", Line :" + value.f1 + ", Count :" + value.f2);
-//                System.out.println(
-//                        "[Line&Product] Product : " + value.f0 + ", Line :" + value.f1 + ", Count :" + value.f2);
             }
         });
 
@@ -100,19 +75,16 @@ public class DataStreamExample {
             @Override
             public void invoke(Tuple3<String, String, Integer> value, Context context) throws Exception {
                 log.info("[Total] Count :" + value.f2);
-//                System.out.println("[Total] Count :" + value.f2);
             }
         });
 
         env.execute();
     }
 
-    /**
-     * Parallel data source that serves a list of key-value pairs.
-     */
-    // private static class DataSource extends
-    // RichParallelSourceFunction<Tuple3<String, String,Integer>> {
+    // private static class DataSource extends RichParallelSourceFunction<Tuple3<String, String,Integer>> {
     private static class DataSource extends RichSourceFunction<Tuple3<String, String, Integer>> {
+
+        private final int THREAD_COUNT = 20;
 
         private volatile boolean running = true;
 
@@ -127,19 +99,29 @@ public class DataStreamExample {
 
         @Override
         public void run(SourceContext<Tuple3<String, String, Integer>> ctx) throws Exception {
-            Random random = new Random(System.currentTimeMillis());
-            while (running) {
-                Thread.sleep(1000);
-                String producId = productIds[random.nextInt(productIds.length)];
-                String lineId = lineIds[random.nextInt(lineIds.length)];
-                int productCount = random.nextInt(10) + 1;
-                Tuple3<String, String, Integer> element = new Tuple3<String, String, Integer>(producId, lineId,
-                        productCount);
-                log.info("[Produce] Product : " + producId + ", Line :" + lineId + ", Count :" + productCount);
-//                System.out
-//                        .println("[Produce] Product : " + producId + ", Line :" + lineId + ", Count :" + productCount);
-                ctx.collect(element);
+            for (int i = 0; i < THREAD_COUNT; i++) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Random random = new Random(System.currentTimeMillis());
+                        while (running) {
+                            try {
+                                Thread.currentThread().sleep(50);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            String producId = productIds[random.nextInt(productIds.length)];
+                            String lineId = lineIds[random.nextInt(lineIds.length)];
+                            int productCount = random.nextInt(10) + 1;
+                            Tuple3<String, String, Integer> element = new Tuple3<String, String, Integer>(producId, lineId,
+                                    productCount);
+                            log.info("[Produce] Product : " + producId + ", Line :" + lineId + ", Count :" + productCount);
+                            ctx.collect(element);
+                        }
+                    }
+                }).start();
             }
+            Thread.sleep(Long.MAX_VALUE);
         }
     }
 }

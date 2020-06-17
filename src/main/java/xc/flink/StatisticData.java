@@ -2,9 +2,17 @@ package xc.flink;
 
 public class StatisticData {
 
-    private static transient final long serialVersionUID = -7644778048949666045L;
+    private String lineId;
     private String productId;
     private Integer count;
+
+    public String getLineId() {
+        return lineId;
+    }
+
+    public void setLineId(String lineId) {
+        this.lineId = lineId;
+    }
 
     public String getProductId() {
         return productId;
@@ -25,9 +33,9 @@ public class StatisticData {
     @Override
     public String toString() {
         return "StatisticData{" +
-                "productId='" + productId + '\'' +
+                "lineId='" + lineId + '\'' +
+                ", productId='" + productId + '\'' +
                 ", count=" + count +
                 '}';
     }
-
 }
