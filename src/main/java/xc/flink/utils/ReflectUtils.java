@@ -1,4 +1,4 @@
-package xc.flink.mongo.utils;
+package xc.flink.utils;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
